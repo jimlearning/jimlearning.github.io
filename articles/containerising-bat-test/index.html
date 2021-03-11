@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="UTF-8"/><meta name="og:site_name" content="JimLearningBlog"/><link rel="canonical" href="https://jimlearning.github.io/articles/containerising-bat-test"/><meta name="twitter:url" content="https://jimlearning.github.io/articles/containerising-bat-test"/><meta name="og:url" content="https://jimlearning.github.io/articles/containerising-bat-test"/><title>Black-box testing with MuleSoft's Blackbox Automated Testing (BAT) CLI | JimLearningBlog</title><meta name="twitter:title" content="Black-box testing with MuleSoft's Blackbox Automated Testing (BAT) CLI | JimLearningBlog"/><meta name="og:title" content="Black-box testing with MuleSoft's Blackbox Automated Testing (BAT) CLI | JimLearningBlog"/><meta name="description" content="In this post we will walk through how you can run a simple test using the BAT CLI inside of a Docker container."/><meta name="twitter:description" content="In this post we will walk through how you can run a simple test using the BAT CLI inside of a Docker container."/><meta name="og:description" content="In this post we will walk through how you can run a simple test using the BAT CLI inside of a Docker container."/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/styles.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to JimLearningBlog"/></head><head><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Karla:400,400i,700,700i"/><link rel="stylesheet" href="/PersonalTheme/fontawesome/all.min.css"/></head><body class="item-page"><header><div class="wrapper"><a class="site-name" href="/">JimLearningBlog</a><p>A description of JimLearningBlog</p><nav><ul><li><a href="/posts"><span></span>Posts</a></li><li><a class="selected" href="/articles"><span class="far fa-newspaper"></span>Articles</a></li><li><a href="/tips"><span class="far fa-star"></span>Tips</a></li><li><a href="/apps"><span></span>Apps</a></li><li><a href="/tags"><span class="fas fa-hashtag"></span>Tags</a></li><li><a href="/about"><span class="far fa-user"></span>About Me</a></li></ul></nav></div></header><div class="wrapper"><article class="animated fadeIn"><span class="date">Published on 2019年06月23日.</span><span class="read-time">🕑 4 minutes read.</span><h1>Black-box testing with MuleSoft's Blackbox Automated Testing (BAT) CLI</h1><ul class="tag-list"><li class="tag variant-0"><a href="/tags/articles">Articles</a></li><li class="tag variant-3"><a href="/tags/docker">Docker</a></li><li class="tag variant-11"><a href="/tags/mule-esb">Mule ESB</a></li></ul><p>In this post we will walk through how you can run a simple test using the BAT CLI inside of a Docker container.</p><div class="content"><h2>Prerequisites</h2><p>To keep things brief, we will assume you already have Docker installed and setup correctly.</p><h2>What is the BAT CLI?</h2><img src="/images/posts/mulesoft-logo.svg" alt="MuleSoft logo"/><p>The BAT CLI is an API Functional Monitoring tool produced by MuleSoft for assuring the quality and reliablility of APIs. It provides a convenient method for those working in the MuleSoft technology stack to implement Black-box testing and Runtime monitoring. Using dataweave, it is possible to develop tests that validate the behavior of APIs against live upstream systems, based on inputs and outputs. Additionally, it has a monitoring capability that allows you to verify that deployed APIs are operating as expected and output test results in a variety of formats as a once off operation or on a schedule.</p><h2>Test Writing Language</h2><p>In this post, we will be writing a test manually and running it as a once off operation with the BAT CLI. To begin with, we will need to create file called <code>tests/example.dwl</code> in our working directory. As the <code>dwl</code> file extension indicates, our test will be written using the Dataweave language. Dataweave is an expression language introduced by MuleSoft for transforming data. Within Dataweave, we will use an embeded Domain Specific Language (DSL) called Behaviour Driven Developmenmt (BDD), which has a similar syntax to other testing frameworks, to define our test. The following example shows a typical API test written using BDD in Dataweave, add the example to the <code>tests/example.dwl</code> file:</p><pre><code>%dw <span class="number">2.0</span> <span class="comment">// Dataweave 2.0
+// Behaviour Driven Development (BDD) Domain Spesific Langage (DSL)</span>
+<span class="keyword">import</span> * from bat::<span class="type">BDD</span> 
+<span class="comment">// Common matchers (i.e. mustEqual, mustMatch, every, oneOf, assert, etc.)</span>
+<span class="keyword">import</span> * from bat::<span class="type">Assertions</span>
+---
+<span class="comment">// Defines a suite of related tests</span>
+<span class="call">suite</span>(<span class="string">"Example"</span>) <span class="keyword">in</span> [
+
+  <span class="comment">// The result of the test must be 200 to be considered a success</span>
+  it must '<span class="keyword">return</span> <span class="number">200</span>' <span class="keyword">in</span> [
+
+    <span class="comment">// Perform a GET request</span>
+    <span class="type">GET</span> `$(config.<span class="property">base_url</span>)/zen` <span class="call">with</span> {} assert [
+      
+      <span class="comment">// Assert that the HTTP response code recieved was 200</span>
+      $.<span class="property">response</span>.<span class="property">status</span> mustEqual <span class="number">200</span>
+    ] 
+  ]
+]
+</code></pre><p>The <code>$(config.base_url)</code> section from the above example indicates that the test is expecting us to provide the Base URL as a configuration item, rather than hard code it within the test. Building our test in this way gives us the ability to change the Base URL so that our test can be executed against different environments. To store our config, we will need to create a <code>config</code> folder and add some configuration files to it. Lets create a file called <code>config/default.dwl</code> with the following contents:</p><pre><code>%dw <span class="number">2.0</span> <span class="comment">// Dataweave 2.0</span>
+---
+config::local::<span class="call">main</span>({})
+</code></pre><p>Next, create a config file for our production configuration called <code>config/prod.dwl</code> with the following contents:</p><pre><code>%dw <span class="number">2.0</span>
+---
+{
+  base_url: 'https://api.<span class="property">github</span>.<span class="property">com</span>'
+}
+</code></pre><p>Then, we need to create a manifest file called <code>bat.yaml</code> which will define the tests to be run as well as the type and location of the report to be produced by BAT. The file should have the following contents:</p><pre><code># <span class="type">Name</span> of the test suite
+suite:
+  name: <span class="string">"Example Test Suite"</span>
+
+# <span class="type">A</span> list of tests to be executed
+files:
+  - file: ./tests/example.<span class="property">dwl</span>
+
+# <span class="type">A</span> list of reports to be produced
+reporters:
+  - type: <span class="type">HTML</span>
+    outFile: /usr/src/mymaven/results.<span class="property">html</span>
+</code></pre><p>Your working directory should now contain the following file structure:</p><pre><code>working-directory
+├── bat.<span class="property">yaml</span>
+├── tests
+│   └── example.<span class="property">dwl</span>
+└── config
+    ├── <span class="keyword">default</span>.<span class="property">dwl</span>
+    └── prod.<span class="property">dwl</span>
+</code></pre><h2>Validating a Test Suite</h2><p>To validate the files and folders we have created, we can run BAT inside a Docker container and provide some additional command line options. From the base of the working directory, run the following command:</p><pre><code>docker run --<span class="keyword">init</span> --rm \
+  -v <span class="string">"${PWD}"</span>:/usr/src/mymaven mikeyryan/mule-blackbox-automated-testing:latest \
+  bat.<span class="property">yaml</span> --config=prod --validate
+</code></pre><p><code>bat.yaml</code> tells BAT the directory the location of the manifest file. <code>--config=prod</code> selects a configuration file named prod (from the config folder) and registers the result as a global variable for interpolation by our tests</p><h2>Running a Test Suite</h2><p>To execute the tests defined in the manifest file, we can run BAT inside a Docker container using the following command:</p><pre><code>docker run --<span class="keyword">init</span> --rm \
+  -v <span class="string">"${PWD}"</span>:/usr/src/mymaven mikeyryan/mule-blackbox-automated-testing:latest \
+  bat.<span class="property">yaml</span> --config=prod
+</code></pre><p>The output of the command should match the below:</p><pre><code><span class="type">BAT Version</span>: <span class="number">1.0.96</span>
+#  <span class="type">File</span>: ./tests/example.<span class="property">dwl</span>
+    
+    <span class="type">Example</span>
+        
+        <span class="keyword">return</span> <span class="number">200</span>
+          ✓ <span class="type">GET</span> https://api.<span class="property">github</span>.<span class="property">com</span>/zen (<span class="number">981</span>.18ms)
+            ✓ <span class="number">200</span> must equal <span class="number">200</span>
+</code></pre><h2>Summary</h2><p>We have previously walked through how to containerise BAT and now we've demonstrated how easy it is to develop and run BAT tests inside Docker containers.</p><h2>References</h2><ul><li><a href="https://hub.docker.com/r/mikeyryan/mule-blackbox-automated-testing "mikeyryan/mule-blackbox-automated-testing"">Docker Hub - MuleSoft docker images</a></li><li><a href="https://docs.mulesoft.com/api-functional-monitoring/bat-install-task "BAT Installation"">Mulesoft - Install BAT</a></li><li><a href="https://docs.mulesoft.com/api-functional-monitoring/bat-command-reference "BAT CLI Reference"">BAT CLI Reference</a></li><li><a href="https://docs.mulesoft.com/api-functional-monitoring/bat-bdd-reference "BAT BDD Reference"">BAT BDD Reference</a></li></ul><p class="footer">Thanks for reading! 🚀</p></div><ul class="share grid compact"><li><a class="twitter" href="https://twitter.com/intent/tweet?via=MikeRyanGough&text=Black-box%20testing%20with%20MuleSoft's%20Blackbox%20Automated%20Testing%20(BAT)%20CLI&url=https://jimlearning.github.ioarticles/containerising-bat-test">Share on Twitter</a></li><li><a class="facebook" href="https://www.facebook.com/sharer/sharer.php?u=https://jimlearning.github.ioarticles/containerising-bat-test">Share on Facebook</a></li><li><a class="linkedin" href="https://www.linkedin.com/shareArticle?mini=true&&titleBlack-box%20testing%20with%20MuleSoft's%20Blackbox%20Automated%20Testing%20(BAT)%20CLI=&summary=&source=&url=https://jimlearning.github.ioarticles/containerising-bat-test">Share on LinkedIn</a></li></ul></article></div><footer class="animated fadeIn"><p>Mike Gough © 2020.</p><p>Powered by <a href="https://github.com/johnsundell/publish">Publish</a> and hosted on <a href="https://github.com/Mike-Gough/Mike-Gough.github.io">GitHub Pages</a>. 100% JavaScript-free.</p><p>Notice a broken link or other issue? <a href="https://github.com/Mike-Gough/Mike-Gough.github.io/issues">Open an issue!</a></p><p><a href="/feed.rss">RSS feed</a></p></footer></body></html>
