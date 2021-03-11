@@ -1,137 +1,137 @@
-<!DOCTYPE html><html lang="zh"><head><meta charset="UTF-8"/><meta name="og:site_name" content="JimLearningBlog"/><link rel="canonical" href="https://jimlearning.github.io/articles/vapor-mongo-api"/><meta name="twitter:url" content="https://jimlearning.github.io/articles/vapor-mongo-api"/><meta name="og:url" content="https://jimlearning.github.io/articles/vapor-mongo-api"/><title>Creating Swift microservices using Vapor and MongoDB | JimLearningBlog</title><meta name="twitter:title" content="Creating Swift microservices using Vapor and MongoDB | JimLearningBlog"/><meta name="og:title" content="Creating Swift microservices using Vapor and MongoDB | JimLearningBlog"/><meta name="description" content="Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker."/><meta name="twitter:description" content="Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker."/><meta name="og:description" content="Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker."/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/styles.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to JimLearningBlog"/></head><head><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Karla:400,400i,700,700i"/><link rel="stylesheet" href="/PersonalTheme/fontawesome/all.min.css"/></head><body class="item-page"><header><div class="wrapper"><a class="site-name" href="/">JimLearningBlog</a><p>A description of JimLearningBlog</p><nav><ul><li><a class="selected" href="/articles"><span class="far fa-newspaper"></span>Articles</a></li><li><a href="/tips"><span class="far fa-star"></span>Tips</a></li><li><a href="/apps"><span></span>Apps</a></li><li><a href="/tags"><span class="fas fa-hashtag"></span>Tags</a></li><li><a href="/about"><span class="far fa-user"></span>About Me</a></li></ul></nav></div></header><div class="wrapper"><article class="animated fadeIn"><span class="date">Published on 2020年02月02日.</span><span class="read-time">🕑 5 minutes read.</span><h1>Creating Swift microservices using Vapor and MongoDB</h1><ul class="tag-list"><li class="tag variant-0"><a href="/tags/articles">Articles</a></li><li class="tag variant-14"><a href="/tags/swift">Swift</a></li><li class="tag variant-3"><a href="/tags/docker">Docker</a></li><li class="tag variant-10"><a href="/tags/mongodb">MongoDB</a></li><li class="tag variant-16"><a href="/tags/vapor">Vapor</a></li></ul><p>Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker.</p><div class="content"><h2>Prerequisites</h2><p>To keep things simple we will assume you have access to a machine running macOS or Linux and have already installed Curl, Swift, Vapor and Docker.</p><h2>Creating a MongoDB instance</h2><p>For this tutorial we will need to setup a local MongoDB instance that we can use for our Todo API. The following command starts a MongoDB container instance, allowing us to execute MongoDB statements against a database instance:</p><pre><code>docker run -d \
+<!DOCTYPE html><html lang="zh"><head><meta charset="UTF-8"/><meta name="og:site_name" content="JimLearningBlog"/><link rel="canonical" href="https://jimlearning.github.io/articles/vapor-mongo-api"/><meta name="twitter:url" content="https://jimlearning.github.io/articles/vapor-mongo-api"/><meta name="og:url" content="https://jimlearning.github.io/articles/vapor-mongo-api"/><title>Creating Swift microservices using Vapor and MongoDB | JimLearningBlog</title><meta name="twitter:title" content="Creating Swift microservices using Vapor and MongoDB | JimLearningBlog"/><meta name="og:title" content="Creating Swift microservices using Vapor and MongoDB | JimLearningBlog"/><meta name="description" content="Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker."/><meta name="twitter:description" content="Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker."/><meta name="og:description" content="Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker."/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/styles.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to JimLearningBlog"/></head><head><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Karla:400,400i,700,700i"/><link rel="stylesheet" href="/PersonalTheme/fontawesome/all.min.css"/></head><body class="item-page"><header><div class="wrapper"><a class="site-name" href="/">JimLearningBlog</a><p>A description of JimLearningBlog</p><nav><ul><li><a class="selected" href="/articles"><span class="far fa-newspaper"></span>Articles</a></li><li><a href="/tips"><span class="far fa-star"></span>Tips</a></li><li><a href="/apps"><span></span>Apps</a></li><li><a href="/tags"><span class="fas fa-hashtag"></span>Tags</a></li><li><a href="/about"><span class="far fa-user"></span>About Me</a></li></ul></nav></div></header><div class="wrapper"><article class="animated fadeIn"><span class="date">Published on 2020年02月02日.</span><span class="read-time">🕑 5 minutes read.</span><h1>Creating Swift microservices using Vapor and MongoDB</h1><ul class="tag-list"><li class="tag variant-0"><a href="/tags/articles">Articles</a></li><li class="tag variant-14"><a href="/tags/swift">Swift</a></li><li class="tag variant-3"><a href="/tags/docker">Docker</a></li><li class="tag variant-10"><a href="/tags/mongodb">MongoDB</a></li><li class="tag variant-16"><a href="/tags/vapor">Vapor</a></li></ul><p>Learn how to create a server-side RESTful API using Swift and Vapor backed with a NoSQL database for storage and run it all using Docker.</p><div class="content"><h2>Prerequisites</h2><p>To keep things simple we will assume you have access to a machine running macOS or Linux and have already installed Curl, Swift, Vapor and Docker.</p><h2>Creating a MongoDB instance</h2><p>For this tutorial we will need to setup a local MongoDB instance that we can use for our Todo API. The following command starts a MongoDB container instance, allowing us to execute MongoDB statements against a database instance:</p><pre><code class="language-bash">docker run -d \
   --name mongodb \
-  -p <span class="swiftnumber">27017</span>-<span class="swiftnumber">27019</span>:<span class="swiftnumber">27017</span>-<span class="swiftnumber">27019</span> \
+  -p 27017-27019:27017-27019 \
   -v ~/data:/data/db \
   mongo:latest
-</code></pre><h2>Creating a Vapor project</h2><p>For this post we will make use of the built in Vapor code generator to create a simple RESTful API for creating, reading, updating and deleting todos. Use vapor to create a new project by running the following command:</p><pre><code>vapor new vapor-todo-api
-</code></pre><p>Once the project files have been generated, navigate into the directory by running:</p><pre><code>cd vapor-todo-api
-</code></pre><p>In order to connect our Vapor application to a MongoDB database we have to modify some of the generated code to remove the use of SQLite. Let's replace the SQLite dependency and target with MeowVapor inside the <code>Package.swift</code> file:</p><pre><code><span class="swiftcomment">// swift-tools-version:4.0</span>
-<span class="swiftkeyword">import</span> PackageDescription
+</code></pre><h2>Creating a Vapor project</h2><p>For this post we will make use of the built in Vapor code generator to create a simple RESTful API for creating, reading, updating and deleting todos. Use vapor to create a new project by running the following command:</p><pre><code class="language-bash">vapor new vapor-todo-api
+</code></pre><p>Once the project files have been generated, navigate into the directory by running:</p><pre><code class="language-bash">cd vapor-todo-api
+</code></pre><p>In order to connect our Vapor application to a MongoDB database we have to modify some of the generated code to remove the use of SQLite. Let's replace the SQLite dependency and target with MeowVapor inside the <code>Package.swift</code> file:</p><pre><code class="language-swift">// swift-tools-version:4.0
+import PackageDescription
 
-<span class="swiftkeyword">let</span> package = <span class="swifttype">Package</span>(
-    name: <span class="swiftstring">"vapor-todo-api"</span>,
+let package = Package(
+    name: "vapor-todo-api",
     products: [
-        .<span class="swiftcall">library</span>(
-            name: <span class="swiftstring">"vapor-todo-api"</span>, 
-            targets: [<span class="swiftstring">"App"</span>]
+        .library(
+            name: "vapor-todo-api", 
+            targets: ["App"]
         ),
     ],
     dependencies: [
-        <span class="swiftcomment">// 💧 A server-side Swift web framework.</span>
-        .<span class="swiftcall">package</span>(
-            url: <span class="swiftstring">"https://github.com/vapor/vapor.git"</span>, 
-            from: <span class="swiftstring">"3.0.0"</span>
+        // 💧 A server-side Swift web framework.
+        .package(
+            url: "https://github.com/vapor/vapor.git", 
+            from: "3.0.0"
         ),
 
-        <span class="swiftcomment">// 🔵 Swift ORM (queries, models, relations, etc) built on Meow, MongoKitten.</span>
-        .<span class="swiftcall">package</span>(
-            url: <span class="swiftstring">"https://github.com/OpenKitten/MeowVapor.git"</span>, 
-            from: <span class="swiftstring">"2.1.2"</span>
+        // 🔵 Swift ORM (queries, models, relations, etc) built on Meow, MongoKitten.
+        .package(
+            url: "https://github.com/OpenKitten/MeowVapor.git", 
+            from: "2.1.2"
         )
     ],
     targets: [
-        .<span class="swiftcall">target</span>(
-            name: <span class="swiftstring">"App"</span>, 
+        .target(
+            name: "App", 
             dependencies: [
-                <span class="swiftstring">"MeowVapor"</span>, 
-                <span class="swiftstring">"Vapor"</span>
+                "MeowVapor", 
+                "Vapor"
             ]
         ),
-        .<span class="swiftcall">target</span>(
-            name: <span class="swiftstring">"Run"</span>, 
+        .target(
+            name: "Run", 
             dependencies: [
-                <span class="swiftstring">"App"</span>
+                "App"
             ]
         ),
-        .<span class="swiftcall">testTarget</span>(
-            name: <span class="swiftstring">"AppTests"</span>, 
+        .testTarget(
+            name: "AppTests", 
             dependencies: [
-                <span class="swiftstring">"App"</span>
+                "App"
             ]
         )
     ]
 )
-</code></pre><p>MeowVapor is a wrapper for Meow and MongoKitten and provides us with a boiletplate-free object persitance framework for MongoDB and Swift, freeing us from the need to manage our database. After adding this dependancy we need to modify the generated <code>Sources/App/configure.swift</code> file in order to set up the MongoDB driver instead of the default SQLite one. We are going to start by setting the database connection details based on an environment variable <code>MONGODB_URI</code>:</p><pre><code><span class="swiftkeyword">import</span> MeowVapor
-<span class="swiftkeyword">import</span> Vapor
+</code></pre><p>MeowVapor is a wrapper for Meow and MongoKitten and provides us with a boiletplate-free object persitance framework for MongoDB and Swift, freeing us from the need to manage our database. After adding this dependancy we need to modify the generated <code>Sources/App/configure.swift</code> file in order to set up the MongoDB driver instead of the default SQLite one. We are going to start by setting the database connection details based on an environment variable <code>MONGODB_URI</code>:</p><pre><code class="language-swift">import MeowVapor
+import Vapor
 
-<span class="swiftcomment">// Called before your application initializes.</span>
-<span class="swiftkeyword">public func</span> configure(
-    <span class="swiftkeyword">_</span> config: <span class="swiftkeyword">inout</span> <span class="swifttype">Config</span>, 
-    <span class="swiftkeyword">_</span> env: <span class="swiftkeyword">inout</span> <span class="swifttype">Environment</span>, 
-    <span class="swiftkeyword">_</span> services: <span class="swiftkeyword">inout</span> <span class="swifttype">Services</span>) <span class="swiftkeyword">throws</span> {
+// Called before your application initializes.
+public func configure(
+    _ config: inout Config, 
+    _ env: inout Environment, 
+    _ services: inout Services) throws {
     
-    <span class="swiftkeyword">let</span> uri = <span class="swifttype">Environment</span>.<span class="swiftcall">get</span>(<span class="swiftstring">"MONGODB_URI"</span>)
-        ?? <span class="swiftstring">"mongodb://localhost/tododb"</span>
+    let uri = Environment.get("MONGODB_URI")
+        ?? "mongodb://localhost/tododb"
 
-    <span class="swiftcomment">// Configure a MongoDB database</span>
-    <span class="swiftkeyword">let</span> meow = <span class="swiftkeyword">try</span> <span class="swifttype">MeowProvider</span>(uri: uri)
+    // Configure a MongoDB database
+    let meow = try MeowProvider(uri: uri)
     
-    <span class="swiftcomment">// Register providers first</span>
-    <span class="swiftkeyword">try</span> services.<span class="swiftcall">register</span>(meow)
+    // Register providers first
+    try services.register(meow)
 
-    <span class="swiftcomment">// Register routes to the router</span>
-    <span class="swiftkeyword">let</span> router = <span class="swifttype">EngineRouter</span>.<span class="swiftcall">default</span>()
-    <span class="swiftkeyword">try</span> <span class="swiftcall">routes</span>(router)
-    services.<span class="swiftcall">register</span>(router, as: <span class="swifttype">Router</span>.<span class="swiftkeyword">self</span>)
+    // Register routes to the router
+    let router = EngineRouter.default()
+    try routes(router)
+    services.register(router, as: Router.self)
 
-    <span class="swiftcomment">// Register middleware</span>
-    <span class="swiftkeyword">var</span> middlewares = <span class="swifttype">MiddlewareConfig</span>()
-    middlewares.<span class="swiftcall">use</span>(<span class="swifttype">ErrorMiddleware</span>.<span class="swiftkeyword">self</span>)
-    services.<span class="swiftcall">register</span>(middlewares)
+    // Register middleware
+    var middlewares = MiddlewareConfig()
+    middlewares.use(ErrorMiddleware.self)
+    services.register(middlewares)
 }
-</code></pre><p>Next, we need to change to the <code>Sources/Models/Todo.swift</code> file so that our Todo model includes an attributed called <code>_id</code> which will be used to store a unique identifier of the type <code>ObjectId</code> for our MongoDB documents:</p><pre><code><span class="swiftkeyword">import</span> MeowVapor
-<span class="swiftkeyword">import</span> Vapor
+</code></pre><p>Next, we need to change to the <code>Sources/Models/Todo.swift</code> file so that our Todo model includes an attributed called <code>_id</code> which will be used to store a unique identifier of the type <code>ObjectId</code> for our MongoDB documents:</p><pre><code class="language-swift">import MeowVapor
+import Vapor
 
-<span class="swiftcomment">// A single entry of a Todo list.</span>
-<span class="swiftkeyword">final class</span> Todo: <span class="swifttype">Model</span> {
+// A single entry of a Todo list.
+final class Todo: Model {
     
-    <span class="swiftcomment">// A unique identifier for the `Todo`</span>
-    var _id: <span class="swifttype">ObjectId</span>
+    // A unique identifier for the `Todo`
+    var _id: ObjectId
 
-    <span class="swiftcomment">// A title describing what this `Todo` entails.</span>
-    <span class="swiftkeyword">var</span> title: <span class="swifttype">String</span>
+    // A title describing what this `Todo` entails.
+    var title: String
 
-    <span class="swiftcomment">// Creates a new `Todo`.</span>
-    <span class="swiftkeyword">init</span>(_id: <span class="swifttype">ObjectId</span>, title: <span class="swifttype">String</span>) {
-        <span class="swiftkeyword">self</span>.<span class="swiftproperty">_id</span> = _id
-        <span class="swiftkeyword">self</span>.<span class="swiftproperty">title</span> = title
+    // Creates a new `Todo`.
+    init(_id: ObjectId, title: String) {
+        self._id = _id
+        self.title = title
     }
     
-    <span class="swiftcomment">// Creates a new `Todo`.</span>
-    <span class="swiftkeyword">init</span>(title: <span class="swifttype">String</span>) {
-        <span class="swiftkeyword">self</span>.<span class="swiftproperty">_id</span> = <span class="swifttype">ObjectId</span>()
-        <span class="swiftkeyword">self</span>.<span class="swiftproperty">title</span> = title
+    // Creates a new `Todo`.
+    init(title: String) {
+        self._id = ObjectId()
+        self.title = title
     }
 }
 
-<span class="swiftcomment">// Allows `Todo` to be encoded to and decoded from HTTP messages.</span>
-<span class="swiftkeyword">extension</span> <span class="swifttype">Todo</span>: <span class="swifttype">Content</span> { }
+// Allows `Todo` to be encoded to and decoded from HTTP messages.
+extension Todo: Content { }
 
-<span class="swiftcomment">// Allows `Todo` to be used as a dynamic parameter in route definitions.</span>
-<span class="swiftkeyword">extension</span> <span class="swifttype">Todo</span>: <span class="swifttype">Parameter</span> {}
-</code></pre><p>Then we need to update our routes inside the <code>Sources/App/routes.swift</code> file to support the GET, POST, PUT end DELETE methods for the Todo's endpoint:</p><pre><code><span class="swiftkeyword">import</span> Vapor
-<span class="swiftkeyword">import</span> MeowVapor
+// Allows `Todo` to be used as a dynamic parameter in route definitions.
+extension Todo: Parameter {}
+</code></pre><p>Then we need to update our routes inside the <code>Sources/App/routes.swift</code> file to support the GET, POST, PUT end DELETE methods for the Todo's endpoint:</p><pre><code class="language-swift">import Vapor
+import MeowVapor
 
-<span class="swiftcomment">// Register your application's routes here.</span>
-<span class="swiftkeyword">public func</span> routes(<span class="swiftkeyword">_</span> router: <span class="swifttype">Router</span>) <span class="swiftkeyword">throws</span> {
-    <span class="swiftkeyword">let</span> todoController = <span class="swifttype">TodoController</span>()
+// Register your application's routes here.
+public func routes(_ router: Router) throws {
+    let todoController = TodoController()
     
-    router.<span class="swiftcall">get</span>(<span class="swiftstring">"todos"</span>, use: todoController.<span class="swiftproperty">index</span>)
-    router.<span class="swiftcall">post</span>(<span class="swiftstring">"todos"</span>, use: todoController.<span class="swiftproperty">create</span>)
-    router.<span class="swiftcall">put</span>(<span class="swiftstring">"todos"</span>, use: todoController.<span class="swiftproperty">upsert</span>)
-    router.<span class="swiftcall">delete</span>(<span class="swiftstring">"todos"</span>, <span class="swifttype">Todo</span>.<span class="swiftproperty">parameter</span>, use: todoController.<span class="swiftproperty">delete</span>)
+    router.get("todos", use: todoController.index)
+    router.post("todos", use: todoController.create)
+    router.put("todos", use: todoController.upsert)
+    router.delete("todos", Todo.parameter, use: todoController.delete)
 }
-</code></pre><p>Lastly we will need to build and run our application. To create a Docker image containing our Vapor project, we can use the <code>web.Dockerfile</code> file that was automatically generated for us by running the following command:</p><pre><code>docker build --build-arg env=docker -t vapor-todo-api-image -f web.<span class="swifttype">Dockerfile</span>
-</code></pre><p>This command may take some time to finish, but when complete we will have made a Docker image containing our compiled Vapor project. The container can be run using the command:</p><pre><code>docker run --name vapor-todo-api -p <span class="swiftnumber">8080</span>:<span class="swiftnumber">80</span> vapor-todo-api-image
-</code></pre><h2>Testing the Todo API</h2><p>Now that we have a running instance of a MongoDB database and our API, let's test it to ensure it works as expected. To insert a new Todo we can call the POST endpoint that we created using the Curl command:</p><pre><code>curl -<span class="swifttype">X POST</span> \
-  -<span class="swifttype">H</span> <span class="swiftstring">"Content-Type: application/json"</span> -d '{<span class="swiftstring">"_id"</span>:<span class="swiftstring">"5e36366465da966614a18f46"</span>, <span class="swiftstring">"title"</span>:<span class="swiftstring">"My todo!"</span>}' \
+</code></pre><p>Lastly we will need to build and run our application. To create a Docker image containing our Vapor project, we can use the <code>web.Dockerfile</code> file that was automatically generated for us by running the following command:</p><pre><code class="language-bash">docker build --build-arg env=docker -t vapor-todo-api-image -f web.Dockerfile
+</code></pre><p>This command may take some time to finish, but when complete we will have made a Docker image containing our compiled Vapor project. The container can be run using the command:</p><pre><code class="language-bash">docker run --name vapor-todo-api -p 8080:80 vapor-todo-api-image
+</code></pre><h2>Testing the Todo API</h2><p>Now that we have a running instance of a MongoDB database and our API, let's test it to ensure it works as expected. To insert a new Todo we can call the POST endpoint that we created using the Curl command:</p><pre><code class="language-bash">curl -X POST \
+  -H "Content-Type: application/json" -d '{"_id":"5e36366465da966614a18f46", "title":"My todo!"}' \
    localhost/todos
-</code></pre><p>After running this command you should recieve a copy of the created Todo in the API response:</p><pre><code>{<span class="swiftstring">"_id"</span>:<span class="swiftstring">"5e36366465da966614a18f46"</span>, <span class="swiftstring">"title"</span>:<span class="swiftstring">"My todo!"</span>}
-</code></pre><p>To verify that our Todo was indeed created, we can use our GET endpoint:</p><pre><code>curl -<span class="swifttype">X GET</span> localhost/todos
-</code></pre><p>This should print the following to the screen:</p><pre><code>[{<span class="swiftstring">"_id"</span>:<span class="swiftstring">"5e36366465da966614a18f46"</span>,<span class="swiftstring">"title"</span>:<span class="swiftstring">"My Todo!"</span>}
-</code></pre><p>Now that we have verified our Todo was indded created, lets replace it using our PUT endpoint by running:</p><pre><code>curl -<span class="swifttype">X PUT</span> \
-  -<span class="swifttype">H</span> <span class="swiftstring">"Content-Type: application/json"</span> -d '{<span class="swiftstring">"_id"</span>:<span class="swiftstring">"5e36366465da966614a18f46"</span>, <span class="swiftstring">"title"</span>:<span class="swiftstring">"My updated todo!"</span>}' \
+</code></pre><p>After running this command you should recieve a copy of the created Todo in the API response:</p><pre><code class="language-bash">{"_id":"5e36366465da966614a18f46", "title":"My todo!"}
+</code></pre><p>To verify that our Todo was indeed created, we can use our GET endpoint:</p><pre><code class="language-bash">curl -X GET localhost/todos
+</code></pre><p>This should print the following to the screen:</p><pre><code class="language-bash">[{"_id":"5e36366465da966614a18f46","title":"My Todo!"}
+</code></pre><p>Now that we have verified our Todo was indded created, lets replace it using our PUT endpoint by running:</p><pre><code class="language-bash">curl -X PUT \
+  -H "Content-Type: application/json" -d '{"_id":"5e36366465da966614a18f46", "title":"My updated todo!"}' \
   localhost/todos
-</code></pre><p>You should recieve a copy of the updated Todo in the API response:</p><pre><code>{<span class="swiftstring">"_id"</span>:<span class="swiftstring">"5e36366465da966614a18f46"</span>, <span class="swiftstring">"title"</span>:<span class="swiftstring">"My updated todo!"</span>}
-</code></pre><p>Finally we can delete our Todo using our DELETE endpoint by running:</p><pre><code>curl -<span class="swifttype">X DELETE</span> localhost/todos/5e36366465da966614a18f48
+</code></pre><p>You should recieve a copy of the updated Todo in the API response:</p><pre><code class="language-bash">{"_id":"5e36366465da966614a18f46", "title":"My updated todo!"}
+</code></pre><p>Finally we can delete our Todo using our DELETE endpoint by running:</p><pre><code class="language-bash">curl -X DELETE localhost/todos/5e36366465da966614a18f48
 </code></pre><p>This should return a HTTP 200 response.</p><h2>Summary</h2><p>That's it! In this post we have demonstrated how to build an RESTful API in Swift that allows you to create, read, update and delete Todo's inside of a MongoDB database. Future posts will look at how we can deploy microservices using kubernetes.</p><h2>References</h2><ul><li><a href="https://swift.org/ "swift.org"">Swift</a></li><li><a href="https://vapor.codes "vapor.codes"">Vapor</a></li><li><a href="https://docs.docker.com/get-started/ "Docker"">Docker - Get Started</a></li></ul><p class="footer">Thanks for reading! 🚀</p></div><ul class="share grid compact"><li><a class="twitter" href="https://twitter.com/intent/tweet?via=MikeRyanGough&text=Creating%20Swift%20microservices%20using%20Vapor%20and%20MongoDB&url=https://jimlearning.github.ioarticles/vapor-mongo-api">Share on Twitter</a></li><li><a class="facebook" href="https://www.facebook.com/sharer/sharer.php?u=https://jimlearning.github.ioarticles/vapor-mongo-api">Share on Facebook</a></li><li><a class="linkedin" href="https://www.linkedin.com/shareArticle?mini=true&&titleCreating%20Swift%20microservices%20using%20Vapor%20and%20MongoDB=&summary=&source=&url=https://jimlearning.github.ioarticles/vapor-mongo-api">Share on LinkedIn</a></li></ul></article></div><footer class="animated fadeIn"><p>Mike Gough © 2020.</p><p>Powered by <a href="https://github.com/johnsundell/publish">Publish</a> and hosted on <a href="https://github.com/Mike-Gough/Mike-Gough.github.io">GitHub Pages</a>. 100% JavaScript-free.</p><p>Notice a broken link or other issue? <a href="https://github.com/Mike-Gough/Mike-Gough.github.io/issues">Open an issue!</a></p><p><a href="/feed.rss">RSS feed</a></p></footer></body></html>
