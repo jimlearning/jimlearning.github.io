@@ -657,6 +657,14 @@ pre code .preprocessing {
     color: #b68a00;
 }
 
+pre code .custom("highlight") {
+    border: 2px solid #990066;
+    border-radius: 3px;
+    padding: 10px;
+    outline: #990066 solid 5px;
+    outline-offset: 5px;
+}
+
 ul.share {
     text-align: center;
 }
